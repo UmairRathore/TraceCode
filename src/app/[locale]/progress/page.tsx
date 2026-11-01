@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { signOutAction } from '@/server/actions/auth'
 import { getLearningProgress } from '@/server/learning/progress'
 
 // A personal learning-progress view, not a marketing page → noindex (which also
@@ -13,12 +16,24 @@ export default async function ProgressPage() {
 
 	return (
 		<main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
-			<h1 className="text-text text-3xl font-semibold">Your progress</h1>
+			<div className="flex items-center justify-between gap-3">
+				<h1 className="text-text text-3xl font-semibold">Your progress</h1>
+				{view.authenticated && (
+					<form action={signOutAction}>
+						<Button type="submit" variant="outline" size="sm">
+							Sign out
+						</Button>
+					</form>
+				)}
+			</div>
 
 			{!view.authenticated && (
 				<p className="text-text-muted text-sm">
-					Sign in to save your attempts across devices. Until then, your attempts are kept locally
-					in your browser on each problem page.
+					<Link href="/login" className="text-accent font-medium">
+						Sign in
+					</Link>{' '}
+					to save your attempts across devices. Until then, your attempts are kept locally in your
+					browser on each problem page.
 				</p>
 			)}
 
@@ -31,6 +46,12 @@ export default async function ProgressPage() {
 
 			{view.authenticated && view.available && (
 				<>
+					<p className="text-text-muted text-sm">
+						{view.progress.filter((p) => p.status === 'solved').length} solved ·{' '}
+						{view.progress.length} attempted · {view.replaysInspected} replays inspected ·{' '}
+						{view.hintsRevealed} hints revealed
+					</p>
+
 					<section className="flex flex-col gap-2">
 						<h2 className="text-text text-lg font-medium">Problems</h2>
 						{view.progress.length === 0 ? (
@@ -40,11 +61,15 @@ export default async function ProgressPage() {
 								{view.progress.map((p) => (
 									<li
 										key={p.problemSlug}
-										className="border-border flex items-center justify-between rounded border px-3 py-2 text-sm"
+										className="border-border flex flex-wrap items-center justify-between gap-1 rounded border px-3 py-2 text-sm"
 									>
-										<span className="text-text font-medium">{p.problemSlug}</span>
+										<Link href={`/practice/${p.problemSlug}`} className="text-accent font-medium">
+											{p.problemSlug}
+										</Link>
 										<span className="text-text-muted">
 											{p.status} · best {p.bestTestsPassed}/{p.testsTotal} · {p.attempts} attempts
+											{p.firstSolvedAt != null &&
+												` · first solved ${new Date(p.firstSolvedAt).toLocaleDateString()}`}
 										</span>
 									</li>
 								))}
@@ -53,7 +78,7 @@ export default async function ProgressPage() {
 					</section>
 
 					<section className="flex flex-col gap-2">
-						<h2 className="text-text text-lg font-medium">Recent attempts</h2>
+						<h2 className="text-text text-lg font-medium">Recent submissions</h2>
 						{view.recentAttempts.length === 0 ? (
 							<p className="text-text-muted text-sm">Nothing yet.</p>
 						) : (
@@ -63,7 +88,9 @@ export default async function ProgressPage() {
 										key={i}
 										className="border-border flex items-center justify-between rounded border px-3 py-2 text-sm"
 									>
-										<span className="text-text">{a.problemSlug}</span>
+										<Link href={`/practice/${a.problemSlug}`} className="text-accent">
+											{a.problemSlug}
+										</Link>
 										<span className={a.allPassed ? 'text-success' : 'text-text-muted'}>
 											{a.testsPassed}/{a.testsTotal} · {new Date(a.createdAt).toLocaleString()}
 										</span>
